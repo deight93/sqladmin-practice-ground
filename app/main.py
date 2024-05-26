@@ -1,8 +1,43 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app import models, schemas, database
+from sqladmin import Admin, ModelView
+from sqladmin.authentication import AuthenticationBackend
+from starlette.requests import Request
+from starlette.responses import RedirectResponse
+import os
 
 app = FastAPI()
+
+# ------
+
+# SQLAdmin Authentication Backend
+class BasicAuthBackend(AuthenticationBackend):
+    async def login(self, request: Request) -> bool:
+        form = await request.form()
+        username = form.get("username")
+        password = form.get("password")
+
+        if username == os.getenv("ADMIN_USERNAME") and password == os.getenv("ADMIN_PASSWORD"):
+            request.session.update({"token": "admin"})
+            return True
+        return False
+
+    async def logout(self, request: Request) -> None:
+        request.session.clear()
+
+    async def authenticate(self, request: Request) -> bool:
+        return request.session.get("token") == "admin"
+
+# SQLAdmin ModelView
+class UserAdmin(ModelView, model=models.User):
+    column_list = [models.User.id, models.User.name, models.User.email]
+
+# Initialize SQLAdmin
+admin = Admin(app, database.engine, authentication_backend=BasicAuthBackend(secret_key=os.getenv("SECRET_KEY")))
+admin.add_view(UserAdmin)
+
+# ------
 
 @app.on_event("startup")
 def startup():
