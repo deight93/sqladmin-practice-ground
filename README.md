@@ -11,3 +11,6 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=admin_password
 SECRET_KEY=your_secret_key_here
 ```
+
+# image
+![Project Image](img/image.png)
